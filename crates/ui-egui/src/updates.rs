@@ -1,19 +1,32 @@
-//! Updates: the banner under the Options Bar that says a newer BIMCraft is out (or coming down, or ready), the box that holds the
+//! Updates: the banner under the Options Bar that says a newer BIMCraft is out (or coming down or ready), the box that holds the
 //! window while one is put in place, and the File menu's two items. Checking, downloading and installing are `bimcraft-update`'s;
 //! this draws what it says and passes the user's clicks on. A window starts with no updater, so a test never phones home: the
-//! desktop's `main` attaches one.
+//! desktop's `main` attaches one. The web build carries no updater at all (`bimcraft-update` does not build for the browser), so
+//! below its methods are inert: no banner, no check, no box.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::Ordering;
+#[cfg(not(target_arch = "wasm32"))]
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
 use bimcraft_update::{Note, State};
-use egui::{Button, Color32, Context, Frame, Id, Modal, OpenUrl, ProgressBar, RichText, Stroke, Ui, ViewportCommand, vec2};
+#[cfg(not(target_arch = "wasm32"))]
+use egui::{Button, Color32, Context, Frame, Id, Modal, OpenUrl, ProgressBar, RichText, Stroke, ViewportCommand, vec2};
+#[cfg(target_arch = "wasm32")]
+use egui::{Context, RichText, Ui};
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::lang::{t, tf};
+#[cfg(target_arch = "wasm32")]
+use crate::lang::t;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::Pending;
 use crate::style::pal;
-use crate::{BimApp, Pending, Status};
+use crate::{BimApp, Status};
 
 /// What a click on the banner asks for, done once it's drawn.
+#[cfg(not(target_arch = "wasm32"))]
 enum Click {
     Update,
     Later,
@@ -26,6 +39,7 @@ pub(crate) fn failed(text: String) -> Status {
     Status { text, error: true }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl BimApp {
     /// Takes what the updater's threads have finished, and says in the status box what a check, a download or an install came to; an
     /// install that went through closes the window.
@@ -170,7 +184,33 @@ impl BimApp {
     }
 }
 
+/// The web build: no updater, so nothing checks, nothing installs and no banner shows. The settings page's Updates item says so.
+#[cfg(target_arch = "wasm32")]
+impl BimApp {
+    pub(crate) fn poll_updates(&mut self, _ctx: &Context) {}
+
+    pub(crate) fn installing(&self) -> bool {
+        false
+    }
+
+    pub(crate) fn has_update_banner(&self) -> bool {
+        false
+    }
+
+    pub(crate) fn installing_box(&self, _ctx: &Context) {}
+
+    pub(crate) fn update_banner(&mut self, _ui: &mut Ui) {}
+
+    pub(crate) fn update_menu(&mut self, ui: &mut Ui) {
+        ui.separator();
+        ui.label(RichText::new(t("This copy doesn't look for updates.")).color(pal().muted));
+    }
+
+    pub(crate) fn install_update(&mut self) {}
+}
+
 /// The banner's main button, in the accent as the File tab is: whether it was clicked.
+#[cfg(not(target_arch = "wasm32"))]
 fn primary(ui: &mut Ui, label: &str, tip: &str) -> bool {
     ui.add(Button::new(RichText::new(t(label)).color(Color32::WHITE).strong()).fill(pal().accent)).on_hover_text(t(tip)).clicked()
 }

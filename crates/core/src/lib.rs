@@ -54,6 +54,7 @@ pub mod stairs;
 pub mod step;
 pub mod styles;
 pub mod texture;
+pub mod time;
 pub mod units;
 pub mod view3d;
 pub mod walls;

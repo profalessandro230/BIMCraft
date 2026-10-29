@@ -643,7 +643,8 @@ pub struct BimApp {
     closing: bool,
     title: String,
     styled: bool,
-    /// The updater, which the desktop app attaches: a window starts without one, and so never phones home.
+    /// The updater, which the desktop app attaches: a window starts without one, and so never phones home. The web build has none.
+    #[cfg(not(target_arch = "wasm32"))]
     pub updates: Option<bimcraft_update::Updater>,
     /// The reader of Revit files, which the desktop app attaches (`bimcraft-rvt` is Apache-2.0 only, so this crate never depends on
     /// it): a window starts without one, so it offers no `.rvt` and a test never reads a real one.
@@ -1049,6 +1050,7 @@ impl BimApp {
             closing: false,
             title: String::new(),
             styled: false,
+            #[cfg(not(target_arch = "wasm32"))]
             updates: None,
             revit: None,
             control: None,
@@ -2437,7 +2439,11 @@ impl BimApp {
         fresh.docking = std::mem::take(&mut self.docking);
         (fresh.settings_path, fresh.settings_kept) = (self.settings_path.take(), self.settings_kept.take());
         fresh.window = std::mem::take(&mut self.window);
-        (fresh.updates, fresh.revit) = (self.updates.take(), self.revit.take());
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            fresh.updates = self.updates.take();
+        }
+        fresh.revit = self.revit.take();
         fresh.control = self.control.take();
         fresh.opens = std::mem::take(&mut self.opens);
         (fresh.recent, fresh.recent_path) = (std::mem::take(&mut self.recent), self.recent_path.take());

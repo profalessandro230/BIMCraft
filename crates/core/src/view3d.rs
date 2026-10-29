@@ -21,6 +21,9 @@ use crate::walls::{self, Axis, Plane};
 pub mod gpu;
 
 /// Shared CPU rendering workers, bounded so background work leaves input and I/O capacity.
+/// The browser build has no threads to spawn (a rayon pool would panic there), so it has no pool: every
+/// caller already falls back to rendering sequentially when there is none.
+#[cfg(not(target_arch = "wasm32"))]
 fn render_pool() -> Option<&'static rayon::ThreadPool> {
     static POOL: OnceLock<Option<rayon::ThreadPool>> = OnceLock::new();
     POOL.get_or_init(|| {
@@ -28,6 +31,11 @@ fn render_pool() -> Option<&'static rayon::ThreadPool> {
         rayon::ThreadPoolBuilder::new().num_threads(n).thread_name(|n| format!("bimcraft-render-{n}")).build().ok()
     })
     .as_ref()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn render_pool() -> Option<&'static rayon::ThreadPool> {
+    None
 }
 
 /// A model point in mm: x east, y north, z up.

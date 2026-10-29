@@ -12,13 +12,17 @@ workspace = true
 
 [dependencies]
 bimcraft-core = { workspace = true }
-bimcraft-update = { workspace = true }
 serde_json = { workspace = true }
 egui = { workspace = true }
 eframe = { workspace = true }
 pollster = "1"
 rfd = { workspace = true }
 sys-locale = { workspace = true }
+
+# The updater's HTTPS stack (ring, ureq) does not build for the browser: on wasm this crate carries no updater,
+# and `updates.rs` gives the window inert stand-ins for the few methods its frames call.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bimcraft-update = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

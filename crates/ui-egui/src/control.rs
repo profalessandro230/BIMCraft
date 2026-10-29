@@ -14,10 +14,11 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, OnceLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use bimcraft_core::bridge::{self, Entry, Error, MAX_LINE, Request};
 use bimcraft_core::ids::Guid;
+use bimcraft_core::time::Instant;
 use egui::Context;
 
 use crate::BimApp;

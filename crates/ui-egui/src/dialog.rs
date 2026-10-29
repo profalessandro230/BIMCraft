@@ -3,10 +3,16 @@
 //! the window's thread (AppKit wants that, and the sheet it opens does not block) and waited for on a thread of its own: the
 //! window keeps its event loop, and the path comes back in a later frame.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::future::Future;
 use std::path::PathBuf;
+#[cfg(not(target_arch = "wasm32"))]
 use std::pin::Pin;
-use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::mpsc::Sender;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::mpsc::channel;
+use std::sync::mpsc::{Receiver, TryRecvError};
 
 use egui::Context;
 
@@ -23,7 +29,8 @@ pub(crate) struct Dialog {
 
 impl BimApp {
     /// Asks for a file to open, or for where to save one (`save`), and calls `then` with the path in a later frame. Nothing
-    /// happens if the dialog is cancelled, and a second dialog is not opened while one is.
+    /// happens if the dialog is cancelled, and a second dialog is not opened while one is. The browser build has no filesystem
+    /// to name a path in, so there it opens no picker and says so.
     pub(crate) fn ask_file(
         &mut self,
         ctx: &Context,
@@ -31,20 +38,31 @@ impl BimApp {
         save: bool,
         then: impl FnOnce(&mut BimApp, PathBuf) + 'static,
     ) {
-        let future: Pin<Box<dyn Future<Output = Option<Vec<rfd::FileHandle>>> + Send>> = if save {
-            Box::pin(async move { dialog.save_file().await.map(|f| vec![f]) })
-        } else {
-            Box::pin(async move { dialog.pick_file().await.map(|f| vec![f]) })
-        };
-        self.begin(
-            ctx,
-            future,
-            Box::new(|app, paths| {
-                if let Some(path) = paths.into_iter().next() {
-                    then(app, path);
-                }
-            }),
-        );
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (ctx, dialog, save, then);
+            self.status = crate::Status {
+                text: "The build in the browser can't open or save files yet.".to_string(),
+                error: false,
+            };
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let future: Pin<Box<dyn Future<Output = Option<Vec<rfd::FileHandle>>> + Send>> = if save {
+                Box::pin(async move { dialog.save_file().await.map(|f| vec![f]) })
+            } else {
+                Box::pin(async move { dialog.pick_file().await.map(|f| vec![f]) })
+            };
+            self.begin(
+                ctx,
+                future,
+                Box::new(|app, paths| {
+                    if let Some(path) = paths.into_iter().next() {
+                        then(app, path);
+                    }
+                }),
+            );
+        }
     }
 
     /// Asks for one file or several to open, and calls `then` with their paths in a later frame, as [`BimApp::ask_file`] does.
@@ -54,9 +72,21 @@ impl BimApp {
         dialog: rfd::AsyncFileDialog,
         then: impl FnOnce(&mut BimApp, Vec<PathBuf>) + 'static,
     ) {
-        self.begin(ctx, Box::pin(dialog.pick_files()), Box::new(then));
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = (ctx, dialog, then);
+            self.status = crate::Status {
+                text: "The build in the browser can't open or save files yet.".to_string(),
+                error: false,
+            };
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.begin(ctx, Box::pin(dialog.pick_files()), Box::new(then));
+        }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn begin(&mut self, ctx: &Context, future: Pin<Box<dyn Future<Output = Option<Vec<rfd::FileHandle>>> + Send>>, then: Then) {
         if self.dialog.is_some() {
             return;
@@ -85,8 +115,8 @@ impl BimApp {
 
 /// Waits for `future`'s answer on a thread of its own and sends it on `tx`. The future is made by the caller, on the window's
 /// thread: on macOS that is where the dialog is begun (its sheet opens at once and does not block), and only waiting for it
-/// is done on the thread.
-#[cfg(not(test))]
+/// is done on the thread. The browser build waits for nothing: it opens no dialog (`ask_file`, `ask_files`).
+#[cfg(all(not(test), not(target_arch = "wasm32")))]
 fn wait(ctx: &Context, future: Pin<Box<dyn Future<Output = Option<Vec<rfd::FileHandle>>> + Send>>, tx: Sender<Option<Vec<PathBuf>>>) {
     let ctx = ctx.clone();
     std::thread::spawn(move || {

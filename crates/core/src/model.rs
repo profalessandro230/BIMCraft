@@ -4797,8 +4797,13 @@ pub fn mix(mut z: u64) -> u64 {
 }
 
 fn fresh_uid() -> u64 {
-    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos() as u64);
-    mix(nanos ^ u64::from(std::process::id()).rotate_left(32))
+    let nanos = crate::time::epoch_nanos();
+    // The process is only there where a system has one; the clock and the count already differ enough in a browser.
+    #[cfg(not(target_arch = "wasm32"))]
+    let pid = u64::from(std::process::id());
+    #[cfg(target_arch = "wasm32")]
+    let pid = 0u64;
+    mix(nanos ^ pid.rotate_left(32))
 }
 
 /// A file from before pens (format 3 and older) as one after: each line weight of a view's, a filter's or a phase's

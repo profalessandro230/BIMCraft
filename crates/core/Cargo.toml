@@ -18,3 +18,7 @@ zune-jpeg = { workspace = true }
 getrandom = { workspace = true }
 tempfile = { workspace = true }
 rayon = { workspace = true }
+
+# In the browser `std`'s Instant and SystemTime panic; `web-time` is the drop-in that reads the clock there.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-time = "1"

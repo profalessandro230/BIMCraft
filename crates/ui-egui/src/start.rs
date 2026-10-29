@@ -9,6 +9,7 @@ use std::time::{Duration, SystemTime};
 
 use bimcraft_core::model::Model;
 use bimcraft_core::view3d::{AZIMUTH, ELEVATION, Scene};
+#[cfg(not(target_arch = "wasm32"))]
 use bimcraft_update::State;
 use egui::epaint::{Mesh, PathShape, Shadow};
 use egui::{
@@ -124,6 +125,8 @@ fn ago(when: SystemTime) -> String {
 }
 
 /// What a click on the page asks for, done once it's drawn.
+/// (`Update`, `Check` and `Restart` are only ever built by the update status, which the web build has no use for.)
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 enum Click {
     New,
     Open,
@@ -265,13 +268,19 @@ impl BimApp {
             Click::Back => self.home.shown = false,
             Click::Page(url) => ctx.open_url(OpenUrl::new_tab(url)),
             Click::Update => {
-                if let Some(u) = self.updates.as_mut() {
-                    u.update_now();
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    if let Some(u) = self.updates.as_mut() {
+                        u.update_now();
+                    }
                 }
             }
             Click::Check => {
-                if let Some(u) = self.updates.as_mut() {
-                    u.check_now();
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    if let Some(u) = self.updates.as_mut() {
+                        u.check_now();
+                    }
                 }
             }
             Click::Restart => self.guard(Pending::Update, &ctx),
@@ -436,6 +445,7 @@ impl BimApp {
     }
 
     /// Whether an update is out, right to left.
+    #[cfg(not(target_arch = "wasm32"))]
     fn update_status(&self, ui: &mut Ui, click: &mut Option<Click>) {
         let Some(u) = self.updates.as_ref() else {
             ui.label(RichText::new(t("This copy doesn't look for updates.")).color(pal().muted));
@@ -483,6 +493,12 @@ impl BimApp {
             }
         }
     }
+
+    /// The web build carries no updater: the status says so, as an updater-less copy does.
+    #[cfg(target_arch = "wasm32")]
+    fn update_status(&self, ui: &mut Ui, _click: &mut Option<Click>) {
+        ui.label(RichText::new(t("This copy doesn't look for updates.")).color(pal().muted));
+    }
 }
 
 /// A section's name, small and spaced, over it.
@@ -517,7 +533,8 @@ fn action(ui: &mut Ui, icon: Icon, title: &str, hint: &str, keys: &str) -> Respo
     r.on_hover_text(t(hint))
 }
 
-/// A rounded label, tinted.
+/// A rounded label, tinted. (Only the update status paints one; the web build has no updater.)
+#[cfg_attr(target_arch = "wasm32", allow(dead_code))]
 fn pill(ui: &mut Ui, text: &str, color: Color32) {
     Frame::new()
         .fill(color.gamma_multiply(0.14))

@@ -1,0 +1,26 @@
+[package]
+name = "bimcraft-web"
+description = "BIMCraft in the browser: wasm over bimcraft-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version = "1.95"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+bimcraft-core = { workspace = true }
+bimcraft-ui-egui = { workspace = true }
+serde_json = { workspace = true }
+eframe = { workspace = true }
+wasm-bindgen-futures = "0.4"
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+web-sys = { version = "0.3", features = ["console", "Window", "Document", "Element", "HtmlCanvasElement"] }
+
+# getrandom 0.3 on wasm32-unknown-unknown: the feature alone is not enough; the build also needs
+# RUSTFLAGS='--cfg getrandom_backend="wasm_js"' (see docs.rs/getrandom, WebAssembly support).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }

@@ -371,12 +371,19 @@ impl BimApp {
         });
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn updates_page(&mut self, ui: &mut Ui) {
         if self.updates.is_some() {
             self.update_menu(ui);
         } else {
             ui.label(RichText::new(t("This copy doesn't look for updates.")).color(pal().muted));
         }
+    }
+
+    /// The web build carries no updater: `update_menu` is the stand-in that says so.
+    #[cfg(target_arch = "wasm32")]
+    fn updates_page(&mut self, ui: &mut Ui) {
+        self.update_menu(ui);
     }
 }
 
@@ -456,7 +463,7 @@ impl BimApp {
                 ui.label(t("Save a recovery copy every"));
                 if ui.add(egui::DragValue::new(&mut self.autosave.interval_minutes).range(1..=120).suffix(" min")).changed() {
                     self.autosave.next_due =
-                        std::time::Instant::now() + std::time::Duration::from_secs(u64::from(self.autosave.interval_minutes) * 60);
+                        bimcraft_core::time::Instant::now() + std::time::Duration::from_secs(u64::from(self.autosave.interval_minutes) * 60);
                 }
             });
         }
